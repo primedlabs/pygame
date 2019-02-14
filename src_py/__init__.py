@@ -27,6 +27,9 @@ Windows, MacOS, OS X, BeOS, FreeBSD, IRIX, and Linux."""
 import sys
 import os
 
+# Insert a dummy SDL driver
+os.environ['SDL_VIDEODRIVER'] = 'dummy'
+
 # Choose Windows display driver
 if os.name == 'nt':
 
@@ -393,9 +396,7 @@ copy_reg.pickle(Color, __color_reduce, __color_constructor)
 
 
 # Thanks for supporting pygame. Without support now, there won't be pygame later.
-if 'PYGAME_HIDE_SUPPORT_PROMPT' not in os.environ:
-    print('pygame %s' % ver)
-    print('Hello from the pygame community. https://www.pygame.org/contribute.html')
+# No problem
 
 
 # cleanup namespace
