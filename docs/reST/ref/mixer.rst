@@ -42,7 +42,7 @@ change the default buffer by calling :func:`pygame.mixer.pre_init` before
 .. function:: init
 
    | :sl:`initialize the mixer module`
-   | :sg:`init(frequency=22050, size=-16, channels=2, buffer=4096) -> None`
+   | :sg:`init(frequency=22050, size=-16, channels=2, buffer=4096, devicename=None) -> None`
 
    Initialize the mixer module for Sound loading and playback. The default
    arguments can be overridden to provide specific audio mixing. Keyword
@@ -53,6 +53,8 @@ change the default buffer by calling :func:`pygame.mixer.pre_init` before
    If the value is negative then signed sample values will be used. Positive
    values mean unsigned audio samples will be used. An invalid value raises an
    exception.
+
+   .. versionadded:: 2 When compiled with SDL2, size can be 32 (32bit floats).
 
    The channels argument is used to specify whether to use mono or stereo. 1
    for mono and 2 for stereo. No other values are supported (negative values
@@ -80,7 +82,7 @@ change the default buffer by calling :func:`pygame.mixer.pre_init` before
 .. function:: pre_init
 
    | :sl:`preset the mixer init arguments`
-   | :sg:`pre_init(frequency=22050, size=-16, channels=2, buffersize=4096) -> None`
+   | :sg:`pre_init(frequency=22050, size=-16, channels=2, buffersize=4096, devicename=None) -> None`
 
    Call pre_init to change the defaults used when the real
    ``pygame.mixer.init()`` is called. Keyword arguments are accepted. The best
@@ -248,9 +250,10 @@ change the default buffer by calling :func:`pygame.mixer.pre_init` before
    an exception when different. Also, source samples are truncated to fit the
    audio sample size. This will not change.
 
-   ``pygame.mixer.Sound(buffer)`` is new in pygame 1.8
-   :class:`pygame.mixer.Sound` keyword arguments and array interface support
-   new in pygame 1.9.2
+   .. versionadded:: 1.8 ``pygame.mixer.Sound(buffer)``
+
+   .. versionadded:: 1.9.2
+      :class:`pygame.mixer.Sound` keyword arguments and array interface support
 
    .. method:: play
 
@@ -345,7 +348,7 @@ change the default buffer by calling :func:`pygame.mixer.pre_init` before
       Return a copy of the Sound object buffer as a bytes (for Python 3.x)
       or str (for Python 2.x) object.
 
-      New in pygame 1.9.2.
+      .. versionadded:: 1.9.2
 
       .. ## Sound.get_raw ##
 

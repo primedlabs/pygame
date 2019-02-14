@@ -71,8 +71,11 @@ void *
 _alloca(size_t size);
 #define alloca _alloca
 #endif
-
 #endif
+
+#define PG_STRINGIZE_HELPER(x) #x
+#define PG_STRINGIZE(x) PG_STRINGIZE_HELPER(x)
+#define PG_WARN(desc) message(__FILE__ "(" PG_STRINGIZE(__LINE__) "): WARNING: " #desc)
 
 /* This is unconditionally defined in Python.h */
 #if defined(_POSIX_C_SOURCE)
@@ -80,6 +83,15 @@ _alloca(size_t size);
 #endif
 
 #include <Python.h>
+
+/* the version macros are defined since version 1.9.5 */
+#define PG_MAJOR_VERSION 1
+#define PG_MINOR_VERSION 9
+#define PG_PATCH_VERSION 5
+#define PG_VERSIONNUM(MAJOR, MINOR, PATCH) (1000*(MAJOR) + 100*(MINOR) + (PATCH))
+#define PG_VERSION_ATLEAST(MAJOR, MINOR, PATCH)                             \
+    (PG_VERSIONNUM(PG_MAJOR_VERSION, PG_MINOR_VERSION, PG_PATCH_VERSION) >= \
+     PG_VERSIONNUM(MAJOR, MINOR, PATCH))
 
 /* Cobjects vanish in Python 3.2; so we will code as though we use capsules */
 #if defined(Py_CAPSULE_H)
@@ -215,6 +227,10 @@ typedef struct pg_bufferinfo_s {
 #define IS_SDLv2 0
 #endif
 
+#if IS_SDLv1 && PG_MAJOR_VERSION >= 2
+#error pygame 2 requires SDL 2
+#endif
+
 #if IS_SDLv2
 /* SDL 1.2 constants removed from SDL 2 */
 typedef enum {
@@ -236,15 +252,31 @@ typedef enum {
     TIMER_RESOLUTION = 0
 } PygameVideoFlags;
 
+/* the wheel button constants were removed from SDL 2 */
 typedef enum {
-    SDL_NOEVENT = (Uint32)-1,
+    PGM_BUTTON_LEFT = SDL_BUTTON_LEFT,
+    PGM_BUTTON_RIGHT = SDL_BUTTON_RIGHT,
+    PGM_BUTTON_MIDDLE = SDL_BUTTON_MIDDLE,
+    PGM_BUTTON_WHEELUP = 4,
+    PGM_BUTTON_WHEELDOWN = 5,
+    PGM_BUTTON_X1 = SDL_BUTTON_X1 + 2,
+    PGM_BUTTON_X2 = SDL_BUTTON_X2 + 2,
+    PGM_BUTTON_KEEP = 0x80
+} PygameMouseFlags;
+
+typedef enum {
+    SDL_NOEVENT = 0,
     /* SDL 1.2 allowed for 8 user defined events. */
     SDL_NUMEVENTS = SDL_USEREVENT + 8,
     SDL_ACTIVEEVENT = SDL_NUMEVENTS,
+    PGE_EVENTBEGIN = SDL_NUMEVENTS,
     SDL_VIDEORESIZE,
     SDL_VIDEOEXPOSE,
+    PGE_KEYREPEAT,
     PGE_EVENTEND
 } PygameEventCode;
+
+#define PGE_NUMEVENTS (PGE_EVENTEND - PGE_EVENTBEGIN)
 
 typedef enum {
     SDL_APPFOCUSMOUSE,
@@ -281,6 +313,14 @@ typedef enum {
 /* macros used throughout the source */
 #define RAISE(x, y) (PyErr_SetString((x), (y)), (PyObject *)NULL)
 
+#ifdef WITH_THREAD
+#define PG_CHECK_THREADS() (1)
+#else /* ~WITH_THREAD */
+#define PG_CHECK_THREADS()                        \
+    (RAISE(PyExc_NotImplementedError,             \
+          "Python built without thread support"))
+#endif /* ~WITH_THREAD */
+
 #define PyType_Init(x) (((x).ob_type) = &PyType_Type)
 #define PYGAMEAPI_LOCAL_ENTRY "_PYGAME_C_API"
 
@@ -316,9 +356,9 @@ typedef enum {
 
 #define PYGAMEAPI_BASE_FIRSTSLOT 0
 #if IS_SDLv1
-#define PYGAMEAPI_BASE_NUMSLOTS 19
+#define PYGAMEAPI_BASE_NUMSLOTS 20
 #else /* IS_SDLv2 */
-#define PYGAMEAPI_BASE_NUMSLOTS 23
+#define PYGAMEAPI_BASE_NUMSLOTS 24
 #endif /* IS_SDLv2 */
 #ifndef PYGAMEAPI_BASE_INTERNAL
 #define pgExc_SDLError ((PyObject *)PyGAME_C_API[PYGAMEAPI_BASE_FIRSTSLOT])
@@ -388,18 +428,22 @@ typedef enum {
 #define pgExc_BufferError \
     ((PyObject *)PyGAME_C_API[PYGAMEAPI_BASE_FIRSTSLOT + 18])
 
+#define pg_FopenUTF8                          \
+    (*(FILE* (*)(const char *, const char *)) \
+                 PyGAME_C_API[PYGAMEAPI_BASE_FIRSTSLOT + 19])
+
 #if IS_SDLv2
 #define pg_GetDefaultWindow \
-    (*(SDL_Window * (*)(void)) PyGAME_C_API[PYGAMEAPI_BASE_FIRSTSLOT + 19])
+    (*(SDL_Window * (*)(void)) PyGAME_C_API[PYGAMEAPI_BASE_FIRSTSLOT + 20])
 
 #define pg_SetDefaultWindow \
-    (*(void (*)(SDL_Window *))PyGAME_C_API[PYGAMEAPI_BASE_FIRSTSLOT + 20])
+    (*(void (*)(SDL_Window *))PyGAME_C_API[PYGAMEAPI_BASE_FIRSTSLOT + 21])
 
 #define pg_GetDefaultWindowSurface \
-    (*(PyObject * (*)(void)) PyGAME_C_API[PYGAMEAPI_BASE_FIRSTSLOT + 21])
+    (*(PyObject * (*)(void)) PyGAME_C_API[PYGAMEAPI_BASE_FIRSTSLOT + 22])
 
 #define pg_SetDefaultWindowSurface \
-    (*(void (*)(PyObject *))PyGAME_C_API[PYGAMEAPI_BASE_FIRSTSLOT + 22])
+    (*(void (*)(PyObject *))PyGAME_C_API[PYGAMEAPI_BASE_FIRSTSLOT + 23])
 
 #endif /* IS_SDLv2 */
 
@@ -411,10 +455,14 @@ typedef enum {
     (PYGAMEAPI_BASE_FIRSTSLOT + PYGAMEAPI_BASE_NUMSLOTS)
 #define PYGAMEAPI_RECT_NUMSLOTS 4
 
+#if IS_SDLv1
 typedef struct {
     int x, y;
     int w, h;
 } GAME_Rect;
+#else
+typedef SDL_Rect GAME_Rect;
+#endif
 
 typedef struct {
     PyObject_HEAD GAME_Rect r;
@@ -650,30 +698,37 @@ typedef struct {
 /*the rwobject are only needed for C side work, not accessable from python*/
 #define PYGAMEAPI_RWOBJECT_FIRSTSLOT \
     (PYGAMEAPI_EVENT_FIRSTSLOT + PYGAMEAPI_EVENT_NUMSLOTS)
-#define PYGAMEAPI_RWOBJECT_NUMSLOTS 7
+#define PYGAMEAPI_RWOBJECT_NUMSLOTS 6
 #ifndef PYGAMEAPI_RWOBJECT_INTERNAL
 #define pgRWopsFromObject           \
     (*(SDL_RWops * (*)(PyObject *)) \
          PyGAME_C_API[PYGAMEAPI_RWOBJECT_FIRSTSLOT + 0])
 #define pgRWopsCheckObject \
     (*(int (*)(SDL_RWops *))PyGAME_C_API[PYGAMEAPI_RWOBJECT_FIRSTSLOT + 1])
-#define pgRWopsFromFileObjectThreaded \
-    (*(SDL_RWops * (*)(PyObject *))   \
-         PyGAME_C_API[PYGAMEAPI_RWOBJECT_FIRSTSLOT + 2])
-#define pgRWopsCheckObjectThreaded \
-    (*(int (*)(SDL_RWops *))PyGAME_C_API[PYGAMEAPI_RWOBJECT_FIRSTSLOT + 3])
 #define pgRWopsEncodeFilePath                  \
     (*(PyObject * (*)(PyObject *, PyObject *)) \
-         PyGAME_C_API[PYGAMEAPI_RWOBJECT_FIRSTSLOT + 4])
+         PyGAME_C_API[PYGAMEAPI_RWOBJECT_FIRSTSLOT + 2])
 #define pgRWopsEncodeString                                                \
     (*(PyObject * (*)(PyObject *, const char *, const char *, PyObject *)) \
-         PyGAME_C_API[PYGAMEAPI_RWOBJECT_FIRSTSLOT + 5])
+         PyGAME_C_API[PYGAMEAPI_RWOBJECT_FIRSTSLOT + 3])
 #define pgRWopsFromFileObject       \
     (*(SDL_RWops * (*)(PyObject *)) \
-         PyGAME_C_API[PYGAMEAPI_RWOBJECT_FIRSTSLOT + 6])
+         PyGAME_C_API[PYGAMEAPI_RWOBJECT_FIRSTSLOT + 4])
+#define pgRWopsReleaseObject       \
+    (*(void (*)(PyObject *))       \
+         PyGAME_C_API[PYGAMEAPI_RWOBJECT_FIRSTSLOT + 5])
 #define import_pygame_rwobject() IMPORT_PYGAME_MODULE(rwobject, RWOBJECT)
 
 /* For backward compatibility */
+#ifdef WITH_THREAD
+#define pgRWopsFromFileObjectThreaded pgRWopsFromFileObject
+#define pgRWopsFromObjectThreaded pgRWopsFromObject
+#define pgRWopsCheckObjectThreaded pgRWopsCheckObject
+#else /* ~WITH_THREAD */
+#define pgRWopsFromFileObjectThreaded PG_CHECK_THREADS
+#define pgRWopsFromObjectThreaded PG_CHECK_THREADS
+#define pgRWopsCheckObjectThreaded PG_CHECK_THREADS
+#endif /* ~WITH_THREAD */
 #define RWopsFromPython RWopsFromObject
 #define RWopsCheckPython RWopsCheckObject
 #define RWopsFromPythonThreaded RWopsFromFileObjectThreaded
@@ -775,6 +830,20 @@ extern void *PyGAME_C_API[PYGAMEAPI_TOTALSLOTS];
     PyCapsule_New(ptr, PG_CAPSULE_NAME(module), NULL)
 #else
 #define encapsulate_api(ptr, module) PyCObject_FromVoidPtr(ptr, NULL)
+#endif
+
+#ifndef PG_INLINE
+#if defined(__clang__)
+#define PG_INLINE __inline__ __attribute__((__unused__))
+#elif defined(__GNUC__)
+#define PG_INLINE __inline__
+#elif defined(_MSC_VER)
+#define PG_INLINE __inline
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
+#define PG_INLINE inline
+#else
+#define PG_INLINE
+#endif
 #endif
 
 /*last platform compiler stuff*/

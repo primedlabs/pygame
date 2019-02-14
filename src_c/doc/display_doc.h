@@ -7,7 +7,7 @@
 
 #define DOC_PYGAMEDISPLAYGETINIT "get_init() -> bool\nReturns True if the display module has been initialized"
 
-#define DOC_PYGAMEDISPLAYSETMODE "set_mode(resolution=(0,0), flags=0, depth=0) -> Surface\nInitialize a window or screen for display"
+#define DOC_PYGAMEDISPLAYSETMODE "set_mode(size=(0, 0), flags=0, depth=0, display=0) -> Surface\nInitialize a window or screen for display"
 
 #define DOC_PYGAMEDISPLAYGETSURFACE "get_surface() -> Surface\nGet a reference to the currently set display surface"
 
@@ -21,9 +21,9 @@
 
 #define DOC_PYGAMEDISPLAYGETWMINFO "get_wm_info() -> dict\nGet information about the current windowing system"
 
-#define DOC_PYGAMEDISPLAYLISTMODES "list_modes(depth=0, flags=pygame.FULLSCREEN) -> list\nGet list of available fullscreen modes"
+#define DOC_PYGAMEDISPLAYLISTMODES "list_modes(depth=0, flags=pygame.FULLSCREEN, display=0) -> list\nGet list of available fullscreen modes"
 
-#define DOC_PYGAMEDISPLAYMODEOK "mode_ok(size, flags=0, depth=0) -> depth\nPick the best color depth for a display mode"
+#define DOC_PYGAMEDISPLAYMODEOK "mode_ok(size, flags=0, depth=0, display=0) -> depth\nPick the best color depth for a display mode"
 
 #define DOC_PYGAMEDISPLAYGLGETATTRIBUTE "gl_get_attribute(flag) -> value\nGet the value for an OpenGL flag for the current display"
 
@@ -47,6 +47,8 @@
 
 #define DOC_PYGAMEDISPLAYSETPALETTE "set_palette(palette=None) -> None\nSet the display color palette for indexed displays"
 
+#define DOC_PYGAMEDISPLAYGETNUMDISPLAYS "get_num_displays() -> int\nReturn the number of displays"
+
 
 
 /* Docs in a comment... slightly easier to read. */
@@ -69,7 +71,7 @@ pygame.display.get_init
 Returns True if the display module has been initialized
 
 pygame.display.set_mode
- set_mode(resolution=(0,0), flags=0, depth=0) -> Surface
+ set_mode(size=(0, 0), flags=0, depth=0, display=0) -> Surface
 Initialize a window or screen for display
 
 pygame.display.get_surface
@@ -98,11 +100,11 @@ pygame.display.get_wm_info
 Get information about the current windowing system
 
 pygame.display.list_modes
- list_modes(depth=0, flags=pygame.FULLSCREEN) -> list
+ list_modes(depth=0, flags=pygame.FULLSCREEN, display=0) -> list
 Get list of available fullscreen modes
 
 pygame.display.mode_ok
- mode_ok(size, flags=0, depth=0) -> depth
+ mode_ok(size, flags=0, depth=0, display=0) -> depth
 Pick the best color depth for a display mode
 
 pygame.display.gl_get_attribute
@@ -148,5 +150,9 @@ Get the current window caption
 pygame.display.set_palette
  set_palette(palette=None) -> None
 Set the display color palette for indexed displays
+
+pygame.display.get_num_displays
+ get_num_displays() -> int
+Return the number of displays
 
 */

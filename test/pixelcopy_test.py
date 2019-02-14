@@ -495,14 +495,16 @@ class PixelCopyTestWithArray(unittest.TestCase):
         color = array([11, 17, 59], uint8)
         target = zeros((5, 7), int32)
         map_array(target, color, surf)
-        self.assert_(alltrue(target == surf.map_rgb(color)))
+
+        self.assertTrue(alltrue(target == surf.map_rgb(color)))
 
         # array column stripes
         stripe = array([[2, 5, 7], [11, 19, 23], [37, 53, 101]], uint8)
         target = zeros((4, stripe.shape[0]), int32)
         map_array(target, stripe, surf)
         target_stripe = array([surf.map_rgb(c) for c in stripe], int32)
-        self.assert_(alltrue(target == target_stripe))
+
+        self.assertTrue(alltrue(target == target_stripe))
 
         # array row stripes
         stripe = array([[[2, 5, 7]],
@@ -512,7 +514,8 @@ class PixelCopyTestWithArray(unittest.TestCase):
         target = zeros((stripe.shape[0], 3), int32)
         map_array(target, stripe, surf)
         target_stripe = array([[surf.map_rgb(c)] for c in stripe[:,0]], int32)
-        self.assert_(alltrue(target == target_stripe))
+
+        self.assertTrue(alltrue(target == target_stripe))
 
         # mismatched shape
         w = 4
@@ -542,12 +545,11 @@ class PixelCopyTestWithArray(unittest.TestCase):
         del numpy
 
 
+@unittest.skipIf(not pygame.HAVE_NEWBUF, 'newbuf not implemented')
 class PixelCopyTestWithArray(unittest.TestCase):
-    try:
+
+    if pygame.HAVE_NEWBUF:
         from pygame.tests.test_utils import buftools
-    except ImportError:
-        pass
-    else:
         class Array2D(buftools.Exporter):
             def __init__(self, initializer):
                 from ctypes import cast, POINTER, c_uint32
@@ -645,13 +647,6 @@ class PixelCopyTestWithArray(unittest.TestCase):
                        '1x', '2x', '3x', '5x', '6x', '7x', '9x']:
             exp = Exporter(shape, format=format)
             self.assertRaises(ValueError, array_to_surface, surface, exp)
-
-    if not pygame.HAVE_NEWBUF:
-        del test_surface_to_array_newbuf
-        del test_array_to_surface_newbuf
-        del test_map_array_newbuf
-        del test_make_surface_newbuf
-        del test_format_newbuf
 
 
 if __name__ == '__main__':

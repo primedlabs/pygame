@@ -34,6 +34,23 @@ def longify(i):
 
 
 class SurfaceTypeTest(unittest.TestCase):
+    def assertRaisesRegex(self, *args, **kwargs):
+        # Overriding base class method to prevent DeprecationWarnings in
+        # python >= 3.2.
+        #
+        # This method can be removed when pygame no longer supports
+        # python < 3.2.
+        try:
+            return super(SurfaceTypeTest, self).assertRaisesRegex(
+                *args, **kwargs)
+        except AttributeError:
+            try:
+                return super(SurfaceTypeTest, self).assertRaisesRegexp(
+                    *args, **kwargs)
+            except AttributeError:
+                self.skipTest(
+                    'No assertRaisesRegex/assertRaisesRegexp method')
+
     def test_set_clip( self ):
         """ see if surface.set_clip(None) works correctly.
         """
@@ -73,7 +90,7 @@ class SurfaceTypeTest(unittest.TestCase):
         # set it with a tuple.
         s.set_at((0,0), (10,10,10, 255))
         r = s.get_at((0,0))
-        self.failUnless(isinstance(r, pygame.Color))
+        self.assertIsInstance(r, pygame.Color)
         self.assertEqual(r, (10,10,10, 255))
 
         # try setting a color with a single integer.
@@ -162,12 +179,7 @@ class SurfaceTypeTest(unittest.TestCase):
             pygame.quit()
 
     def test_copy(self):
-
-        # __doc__ (as of 2008-06-25) for pygame.surface.Surface.copy:
-
-          # Surface.copy(): return Surface
-          # create a new copy of a Surface
-
+        """Ensure a surface can be copied."""
         color = (25, 25, 25, 25)
         s1 = pygame.Surface((32,32), pygame.SRCALPHA, 32)
         s1.fill(color)
@@ -177,27 +189,21 @@ class SurfaceTypeTest(unittest.TestCase):
         s1rect = s1.get_rect()
         s2rect = s2.get_rect()
 
-        self.assert_(s1rect.size == s2rect.size)
-        self.assert_(s2.get_at((10,10)) == color)
+        self.assertEqual(s1rect.size, s2rect.size)
+        self.assertEqual(s2.get_at((10,10)), color)
 
     def test_fill(self):
-
-        # __doc__ (as of 2008-06-25) for pygame.surface.Surface.fill:
-
-          # Surface.fill(color, rect=None, special_flags=0): return Rect
-          # fill Surface with a solid color
-
+        """Ensure a surface can be filled."""
         color = (25, 25, 25, 25)
         fill_rect = pygame.Rect(0, 0, 16, 16)
-
         s1 = pygame.Surface((32,32), pygame.SRCALPHA, 32)
         s1.fill(color, fill_rect)
 
         for pt in test_utils.rect_area_pts(fill_rect):
-            self.assert_(s1.get_at(pt) == color )
+            self.assertEqual(s1.get_at(pt), color)
 
         for pt in test_utils.rect_outer_bounds(fill_rect):
-            self.assert_(s1.get_at(pt) != color )
+            self.assertNotEqual(s1.get_at(pt), color)
 
     def test_fill_negative_coordinates(self):
 
@@ -223,197 +229,169 @@ class SurfaceTypeTest(unittest.TestCase):
         self.assertEqual(tuple(r3), (0, 0, 0, 0))
 
     def test_fill_keyword_args(self):
+        """Ensure fill() accepts keyword arguments."""
         color = (1, 2, 3, 255)
         area = (1, 1, 2, 2)
         s1 = pygame.Surface((4, 4), 0, 32)
         s1.fill(special_flags=pygame.BLEND_ADD, color=color, rect=area)
-        self.assert_(s1.get_at((0, 0)) == (0, 0, 0, 255))
-        self.assert_(s1.get_at((1, 1)) == color)
+
+        self.assertEqual(s1.get_at((0, 0)), (0, 0, 0, 255))
+        self.assertEqual(s1.get_at((1, 1)), color)
 
     ########################################################################
 
     def test_get_alpha(self):
-
-        # __doc__ (as of 2008-06-25) for pygame.surface.Surface.get_alpha:
-
-          # Surface.get_alpha(): return int_value or None
-          # get the current Surface transparency value
-
+        """Ensure a surface's alpha value can be retrieved."""
         s1 = pygame.Surface((32,32), pygame.SRCALPHA, 32)
-        self.assert_(s1.get_alpha() == 255)
+
+        self.assertEqual(s1.get_alpha(), 255)
 
         for alpha in (0, 32, 127, 255):
             s1.set_alpha(alpha)
-            for t in range(4): s1.set_alpha(s1.get_alpha())
-            self.assert_(s1.get_alpha() == alpha)
+            for t in range(4):
+                s1.set_alpha(s1.get_alpha())
+
+            self.assertEqual(s1.get_alpha(), alpha)
 
     ########################################################################
 
     def test_get_bytesize(self):
+        """Ensure a surface's bit and byte sizes can be retrieved."""
+        depth = 32
+        depth_bytes = 4
+        s1 = pygame.Surface((32, 32), pygame.SRCALPHA, depth)
 
-        # __doc__ (as of 2008-06-25) for pygame.surface.Surface.get_bytesize:
-
-          # Surface.get_bytesize(): return int
-          # get the bytes used per Surface pixel
-
-        s1 = pygame.Surface((32,32), pygame.SRCALPHA, 32)
-        self.assert_(s1.get_bytesize() == 4)
-        self.assert_(s1.get_bitsize() == 32)
+        self.assertEqual(s1.get_bytesize(), depth_bytes)
+        self.assertEqual(s1.get_bitsize(), depth)
 
     ########################################################################
 
-
     def test_get_flags(self):
-
-        # __doc__ (as of 2008-06-25) for pygame.surface.Surface.get_flags:
-
-          # Surface.get_flags(): return int
-          # get the additional flags used for the Surface
-
+        """Ensure a surface's flags can be retrieved."""
         s1 = pygame.Surface((32,32), pygame.SRCALPHA, 32)
-        self.assert_(s1.get_flags() == pygame.SRCALPHA)
 
+        self.assertEqual(s1.get_flags(), pygame.SRCALPHA)
 
     ########################################################################
 
     def test_get_parent(self):
-
-        # __doc__ (as of 2008-06-25) for pygame.surface.Surface.get_parent:
-
-          # Surface.get_parent(): return Surface
-          # find the parent of a subsurface
-
+        """Ensure a surface's parent can be retrieved."""
         parent = pygame.Surface((16, 16))
         child = parent.subsurface((0,0,5,5))
 
-        self.assert_(child.get_parent() is parent)
+        self.assertIs(child.get_parent(), parent)
 
     ########################################################################
 
     def test_get_rect(self):
-
-        # __doc__ (as of 2008-06-25) for pygame.surface.Surface.get_rect:
-
-          # Surface.get_rect(**kwargs): return Rect
-          # get the rectangular area of the Surface
-
-        surf = pygame.Surface((16, 16))
-
+        """Ensure a surface's rect can be retrieved."""
+        size = (16, 16)
+        surf = pygame.Surface(size)
         rect = surf.get_rect()
 
-        self.assert_(rect.size == (16, 16))
+        self.assertEqual(rect.size, size)
 
     ########################################################################
 
     def test_get_width__size_and_height(self):
-
-        # __doc__ (as of 2008-06-25) for pygame.surface.Surface.get_width:
-
-          # Surface.get_width(): return width
-          # get the width of the Surface
-
+        """Ensure a surface's size, width and height can be retrieved."""
         for w in xrange_(0, 255, 32):
             for h in xrange_(0, 127, 15):
                 s = pygame.Surface((w, h))
-                self.assertEquals(s.get_width(), w)
-                self.assertEquals(s.get_height(), h)
-                self.assertEquals(s.get_size(), (w, h))
+                self.assertEqual(s.get_width(), w)
+                self.assertEqual(s.get_height(), h)
+                self.assertEqual(s.get_size(), (w, h))
 
     def test_get_view(self):
+        """Ensure a buffer view of the surface's pixels can be retrieved."""
         # Check that BufferProxys are returned when array depth is supported,
         # ValueErrors returned otherwise.
         Error = ValueError
-
         s = pygame.Surface((5, 7), 0, 8)
+        v2 = s.get_view('2')
+
         self.assertRaises(Error, s.get_view, '0')
         self.assertRaises(Error, s.get_view, '1')
-        v = s.get_view('2')
-        self.assert_(isinstance(v, BufferProxy))
+        self.assertIsInstance(v2, BufferProxy)
         self.assertRaises(Error, s.get_view, '3')
 
         s = pygame.Surface((8, 7), 0, 8)
         length = s.get_bytesize() * s.get_width() * s.get_height()
-        v = s.get_view('0')
-        self.assert_(isinstance(v, BufferProxy))
-        self.assertEqual(v.length, length)
-        v = s.get_view('1')
-        self.assert_(isinstance(v, BufferProxy))
-        self.assertEqual(v.length, length)
+        v0 = s.get_view('0')
+        v1 = s.get_view('1')
+
+        self.assertIsInstance(v0, BufferProxy)
+        self.assertEqual(v0.length, length)
+        self.assertIsInstance(v1, BufferProxy)
+        self.assertEqual(v1.length, length)
 
         s = pygame.Surface((5, 7), 0, 16)
+        v2 = s.get_view('2')
+
         self.assertRaises(Error, s.get_view, '0')
         self.assertRaises(Error, s.get_view, '1')
-        v = s.get_view('2')
-        self.assert_(isinstance(v, BufferProxy))
+        self.assertIsInstance(v2, BufferProxy)
         self.assertRaises(Error, s.get_view, '3')
 
         s = pygame.Surface((8, 7), 0, 16)
         length = s.get_bytesize() * s.get_width() * s.get_height()
-        v = s.get_view('0')
-        self.assert_(isinstance(v, BufferProxy))
-        self.assertEqual(v.length, length)
-        v = s.get_view('1')
-        self.assert_(isinstance(v, BufferProxy))
-        self.assertEqual(v.length, length)
+        v0 = s.get_view('0')
+        v1 = s.get_view('1')
+
+        self.assertIsInstance(v0, BufferProxy)
+        self.assertEqual(v0.length, length)
+        self.assertIsInstance(v1, BufferProxy)
+        self.assertEqual(v1.length, length)
 
         s = pygame.Surface((5, 7), pygame.SRCALPHA, 16)
-        v = s.get_view('2')
-        self.assert_(isinstance(v, BufferProxy))
+        v2 = s.get_view('2')
+
+        self.assertIsInstance(v2, BufferProxy)
         self.assertRaises(Error, s.get_view, '3')
 
         s = pygame.Surface((5, 7), 0, 24)
+        v2 = s.get_view('2')
+        v3 = s.get_view('3')
+
         self.assertRaises(Error, s.get_view, '0')
         self.assertRaises(Error, s.get_view, '1')
-        v = s.get_view('2')
-        self.assertTrue(isinstance(v, BufferProxy))
-        v = s.get_view('3')
-        self.assert_(isinstance(v, BufferProxy))
+        self.assertIsInstance(v2, BufferProxy)
+        self.assertIsInstance(v3, BufferProxy)
 
         s = pygame.Surface((8, 7), 0, 24)
         length = s.get_bytesize() * s.get_width() * s.get_height()
-        v = s.get_view('0')
-        self.assert_(isinstance(v, BufferProxy))
-        self.assertEqual(v.length, length)
-        v = s.get_view('1')
-        self.assertTrue(isinstance(v, BufferProxy))
-        self.assertEqual(v.length, length)
+        v0 = s.get_view('0')
+        v1 = s.get_view('1')
+
+        self.assertIsInstance(v0, BufferProxy)
+        self.assertEqual(v0.length, length)
+        self.assertIsInstance(v1, BufferProxy)
+        self.assertEqual(v1.length, length)
 
         s = pygame.Surface((5, 7), 0, 32)
         length = s.get_bytesize() * s.get_width() * s.get_height()
-        v = s.get_view('0')
-        self.assert_(isinstance(v, BufferProxy))
-        self.assertEqual(v.length, length)
-        v = s.get_view('1')
-        self.assert_(isinstance(v, BufferProxy))
-        self.assertEqual(v.length, length)
-        v = s.get_view('2')
-        self.assert_(isinstance(v, BufferProxy))
-        v = s.get_view('3')
-        self.assert_(isinstance(v, BufferProxy))
+        v0 = s.get_view('0')
+        v1 = s.get_view('1')
+        v2 = s.get_view('2')
+        v3 = s.get_view('3')
+
+        self.assertIsInstance(v0, BufferProxy)
+        self.assertEqual(v0.length, length)
+        self.assertIsInstance(v1, BufferProxy)
+        self.assertEqual(v1.length, length)
+        self.assertIsInstance(v2, BufferProxy)
+        self.assertIsInstance(v3, BufferProxy)
 
         s2 = s.subsurface((0, 0, 4, 7))
+
         self.assertRaises(Error, s2.get_view, '0')
         self.assertRaises(Error, s2.get_view, '1')
-        s2 = None
 
+        s2 = None
         s = pygame.Surface((5, 7), pygame.SRCALPHA, 32)
-        v = s.get_view('2')
-        self.assert_(isinstance(v, BufferProxy))
-        v = s.get_view('3')
-        self.assert_(isinstance(v, BufferProxy))
-        v = s.get_view('a')
-        self.assert_(isinstance(v, BufferProxy))
-        v = s.get_view('A')
-        self.assert_(isinstance(v, BufferProxy))
-        v = s.get_view('r')
-        self.assert_(isinstance(v, BufferProxy))
-        v = s.get_view('G')
-        self.assert_(isinstance(v, BufferProxy))
-        v = s.get_view('g')
-        self.assert_(isinstance(v, BufferProxy))
-        v = s.get_view('B')
-        self.assert_(isinstance(v, BufferProxy))
-        v = s.get_view('b')
+
+        for kind in ('2', '3', 'a', 'A', 'r', 'R', 'g', 'G', 'b', 'B'):
+            self.assertIsInstance(s.get_view(kind), BufferProxy)
 
         # Check default argument value: '2'
         s = pygame.Surface((2, 4), 0, 32)
@@ -424,17 +402,26 @@ class SurfaceTypeTest(unittest.TestCase):
 
         # Check locking.
         s = pygame.Surface((2, 4), 0, 32)
-        self.assert_(not s.get_locked())
+
+        self.assertFalse(s.get_locked())
+
         v = s.get_view('2')
-        self.assert_(not s.get_locked())
+
+        self.assertFalse(s.get_locked())
+
         c = v.__array_interface__
-        self.assert_(s.get_locked())
+
+        self.assertTrue(s.get_locked())
+
         c = None
         gc.collect()
-        self.assert_(s.get_locked())
+
+        self.assertTrue(s.get_locked())
+
         v = None
         gc.collect()
-        self.assert_(not s.get_locked())
+
+        self.assertFalse(s.get_locked())
 
         # Check invalid view kind values.
         s = pygame.Surface((2, 4), pygame.SRCALPHA, 32)
@@ -472,7 +459,8 @@ class SurfaceTypeTest(unittest.TestCase):
             s = pygame.Surface((5, 7), 0, bitsize)
             length = s.get_pitch() * s.get_height()
             v = s.get_buffer()
-            self.assert_(isinstance(v, BufferProxy))
+
+            self.assertIsInstance(v, BufferProxy)
             self.assertEqual(v.length, length)
             self.assertEqual(repr(v), "<BufferProxy(" + str(length) + ")>")
 
@@ -481,7 +469,8 @@ class SurfaceTypeTest(unittest.TestCase):
         s2 = s.subsurface((1, 2, 5, 7))
         length = s2.get_pitch() * s2.get_height()
         v = s2.get_buffer()
-        self.assert_(isinstance(v, BufferProxy))
+
+        self.assertIsInstance(v, BufferProxy)
         self.assertEqual(v.length, length)
 
         # Check locking.
@@ -492,17 +481,10 @@ class SurfaceTypeTest(unittest.TestCase):
         gc.collect()
         self.assertFalse(s.get_locked())
 
-    try:
-        pygame.bufferproxy.get_segcount
-    except AttributeError:
-        pass
-    else:
-        def test_get_buffer_oldbuf(self):
-            self.OLDBUF_get_buffer_oldbuf()
-        def test_get_view_oldbuf(self):
-            self.OLDBUF_get_view_oldbuf()
+    OLDBUF = hasattr(pygame.bufferproxy, 'get_segcount')
 
-    def OLDBUF_get_buffer_oldbuf(self):
+    @unittest.skipIf(not OLDBUF, 'old buffer not available')
+    def test_get_buffer_oldbuf(self):
         from pygame.bufferproxy import get_segcount, get_write_buffer
 
         s = pygame.Surface((2, 4), pygame.SRCALPHA, 32)
@@ -514,7 +496,8 @@ class SurfaceTypeTest(unittest.TestCase):
         self.assertEqual(segaddr, s._pixels_address)
         self.assertEqual(seglen, buflen)
 
-    def OLDBUF_get_view_oldbuf(self):
+    @unittest.skipIf(not OLDBUF, 'old buffer not available')
+    def test_get_view_oldbuf(self):
         from pygame.bufferproxy import get_segcount, get_write_buffer
 
         s = pygame.Surface((2, 4), pygame.SRCALPHA, 32)
@@ -540,8 +523,11 @@ class SurfaceTypeTest(unittest.TestCase):
 
         for colorkey in colorkeys:
             s.set_colorkey(colorkey)
-            for t in range(4): s.set_colorkey(s.get_colorkey())
-            self.assertEquals(s.get_colorkey(), colorkey)
+
+            for t in range(4):
+                s.set_colorkey(s.get_colorkey())
+
+            self.assertEqual(s.get_colorkey(), colorkey)
 
     def test_set_masks(self):
         s = pygame.Surface((32,32))
@@ -611,7 +597,7 @@ class SurfaceTypeTest(unittest.TestCase):
         dst.blit(src, (0,0))
 
         for pt in test_utils.rect_area_pts(src.get_rect()):
-            self.assertEquals ( dst.get_at(pt)[1], src.get_at(pt)[1] )
+            self.assertEqual(dst.get_at(pt)[1], src.get_at(pt)[1])
 
     def todo_test_blit__blit_to_self(self): #TODO
         src = pygame.Surface( (256,256), SRCALPHA, 32)
@@ -639,7 +625,7 @@ class SurfaceTypeTest(unittest.TestCase):
         # TODO:
         # what is the correct behaviour ?? should it blend? what algorithm?
 
-        self.assertEquals(s.get_at((0,0)), (32,32,32,31))
+        self.assertEqual(s.get_at((0,0)), (32,32,32,31))
 
     def test_blit__SRCALPHA32_to_8(self):
         # Bug: fatal
@@ -664,8 +650,9 @@ class SurfaceTypeTest(unittest.TestCase):
         im  = pygame.image.load(example_path(os.path.join("data", "city.png")))
         im2 = pygame.image.load(example_path(os.path.join("data", "brick.png")))
 
-        self.assertEquals( im.get_palette(),  ((0, 0, 0, 255), (255, 255, 255, 255)) )
-        self.assertEquals( im2.get_palette(), ((0, 0, 0, 255), (0, 0, 0, 255)) )
+        self.assertEqual(im.get_palette(),
+                         ((0, 0, 0, 255), (255, 255, 255, 255)))
+        self.assertEqual(im2.get_palette(), ((0, 0, 0, 255), (0, 0, 0, 255)))
 
         self.assertEqual(repr(im.convert(32)),  '<Surface(24x24x32 SW)>')
         self.assertEqual(repr(im2.convert(32)), '<Surface(469x137x32 SW)>')
@@ -679,6 +666,55 @@ class SurfaceTypeTest(unittest.TestCase):
         # an empty palette (all the entries are black).
         self.assertRaises(pygame.error, im2.convert, 8)
         self.assertEqual(pygame.get_error(), "Empty destination palette")
+
+    def test_convert_init(self):
+        """ Ensure initialization exceptions are raised
+            for surf.convert()."""
+        surf = pygame.Surface((1, 1))
+
+        self.assertRaisesRegex(pygame.error, 'display initialized',
+                               surf.convert)
+
+        pygame.display.init()
+        try:
+            if os.environ.get('SDL_VIDEODRIVER') != 'dummy':
+                try:
+                    surf.convert(32)
+                    surf.convert(pygame.Surface((1, 1)))
+                except pygame.error:
+                    self.fail("convert() should not raise an exception here.")
+
+            self.assertRaisesRegex(pygame.error, 'No video mode',
+                                   surf.convert)
+
+            pygame.display.set_mode((640,480))
+            try:
+                surf.convert()
+            except pygame.error:
+                self.fail("convert() should not raise an exception here.")
+        finally:
+            pygame.display.quit()
+
+    def test_convert_alpha_init(self):
+        """ Ensure initialization exceptions are raised
+            for surf.convert_alpha()."""
+        surf = pygame.Surface((1, 1))
+
+        self.assertRaisesRegex(pygame.error, 'display initialized',
+                               surf.convert_alpha)
+
+        pygame.display.init()
+        try:
+            self.assertRaisesRegex(pygame.error, 'No video mode',
+                                   surf.convert_alpha)
+
+            pygame.display.set_mode((640,480))
+            try:
+                surf.convert_alpha()
+            except pygame.error:
+                self.fail("convert_alpha() should not raise an exception here.")
+        finally:
+            pygame.display.quit()
 
     def todo_test_convert(self):
 
@@ -765,7 +801,7 @@ class SurfaceTypeTest(unittest.TestCase):
         surf.set_at((1, 0), c10)
         surf.set_at((1, 1), c11)
         c = surf.get_at((0, 0))
-        self.failUnless(isinstance(c, pygame.Color))
+        self.assertIsInstance(c, pygame.Color)
         self.assertEqual(c, c00)
         self.assertEqual(surf.get_at((0, 1)), c01)
         self.assertEqual(surf.get_at((1, 0)), c10)
@@ -815,11 +851,11 @@ class SurfaceTypeTest(unittest.TestCase):
 
     def todo_test_get_colorkey(self):
         surf = pygame.surface((2, 2), 0, 24)
-        self.failUnless(surf.get_colorykey() is None)
+        self.assertIsNone(surf.get_colorykey())
         colorkey = pygame.Color(20, 40, 60)
         surf.set_colorkey(colorkey)
         ck = surf.get_colorkey()
-        self.failUnless(isinstance(ck, pygame.Color))
+        self.assertIsInstance(ck, pygame.Color)
         self.assertEqual(ck, colorkey)
 
     def todo_test_get_height(self):
@@ -910,7 +946,7 @@ class SurfaceTypeTest(unittest.TestCase):
             for c2, c in zip(palette2, palette):
                 self.assertEqual(c2, c)
             for c in palette2:
-                self.failUnless(isinstance(c, pygame.Color))
+                self.assertIsInstance(c, pygame.Color)
         finally:
             pygame.quit()
 
@@ -923,7 +959,7 @@ class SurfaceTypeTest(unittest.TestCase):
             color = pygame.Color(1, 2, 3, 255)
             surf.set_palette_at(0, color)
             color2 = surf.get_palette_at(0)
-            self.failUnless(isinstance(color2, pygame.Color))
+            self.assertIsInstance(color2, pygame.Color)
             self.assertEqual(color2, color)
             self.assertRaises(IndexError, surf.get_palette_at, -1)
             self.assertRaises(IndexError, surf.get_palette_at, 256)
@@ -1036,35 +1072,48 @@ class SurfaceTypeTest(unittest.TestCase):
 
         self.fail()
 
-    def todo_test_set_alpha(self):
-
-        # __doc__ (as of 2008-08-02) for pygame.surface.Surface.set_alpha:
-
-          # Surface.set_alpha(value, flags=0): return None
-          # Surface.set_alpha(None): return None
-          # set the alpha value for the full Surface image
-          #
-          # Set the current alpha value fo r the Surface. When blitting this
-          # Surface onto a destination, the pixels will be drawn slightly
-          # transparent. The alpha value is an integer from 0 to 255, 0 is fully
-          # transparent and 255 is fully opaque. If None is passed for the alpha
-          # value, then the Surface alpha will be disabled.
-          #
-          # This value is different than the per pixel Surface alpha. If the
-          # Surface format contains per pixel alphas, then this alpha value will
-          # be ignored. If the Surface contains per pixel alphas, setting the
-          # alpha value to None will disable the per pixel transparency.
-          #
-          # The optional flags argument can be set to pygame.RLEACCEL to provide
-          # better performance on non accelerated displays. An RLEACCEL Surface
-          # will be slower to modify, but quicker to blit as a source.
-          #
-
-        s = pygame.Surface((1,1), SRCALHPA, 32)
-        s.fill((1, 2, 3, 4))
+    def test_set_alpha_none(self):
+        """surf.set_alpha(None) disables blending"""
+        s = pygame.Surface((1,1), SRCALPHA, 32)
+        s.fill((0, 255, 0, 128))
         s.set_alpha(None)
-        self.assertEqual(s.get_at((0, 0)), (1, 2, 3, 255))
-        self.fail()
+        self.assertEqual(None, s.get_alpha())
+
+        s2 = pygame.Surface((1,1), SRCALPHA, 32)
+        s2.fill((255, 0, 0, 255))
+        s2.blit(s, (0, 0))
+        self.assertEqual(s2.get_at((0, 0))[0], 0, "the red component should be 0")
+
+    def test_set_alpha_value(self):
+        """surf.set_alpha(x), where x != None, enables blending"""
+        s = pygame.Surface((1,1), SRCALPHA, 32)
+        s.fill((0, 255, 0, 128))
+        s.set_alpha(255)
+
+        s2 = pygame.Surface((1,1), SRCALPHA, 32)
+        s2.fill((255, 0, 0, 255))
+        s2.blit(s, (0, 0))
+        self.assertGreater(s2.get_at((0, 0))[0], 0, "the red component should be above 0")
+
+    def test_palette_colorkey(self):
+        """ test bug discovered by robertpfeiffer
+        https://github.com/pygame/pygame/issues/721
+        """
+        surf = pygame.image.load(example_path(os.path.join("data", "alien2.png")))
+        key = surf.get_colorkey()
+        self.assertEqual(surf.get_palette()[surf.map_rgb(key)], key)
+
+    def test_palette_colorkey_set_px(self):
+        surf = pygame.image.load(example_path(os.path.join("data", "alien2.png")))
+        key = surf.get_colorkey()
+        surf.set_at((0, 0), key)
+        self.assertEqual(surf.get_at((0, 0)), key)
+
+    def test_palette_colorkey_fill(self):
+        surf = pygame.image.load(example_path(os.path.join("data", "alien2.png")))
+        key = surf.get_colorkey()
+        surf.fill(key)
+        self.assertEqual(surf.get_at((0, 0)), key)
 
     def test_set_palette(self):
         palette = [pygame.Color(i, i, i) for i in range(256)]
@@ -1160,9 +1209,9 @@ class SurfaceTypeTest(unittest.TestCase):
         self.assertRaises(ValueError, surf.subsurface, (0,0,1,1,666))
 
 
-        self.assertEquals(s.get_shifts(), surf.get_shifts())
-        self.assertEquals(s.get_masks(), surf.get_masks())
-        self.assertEquals(s.get_losses(), surf.get_losses())
+        self.assertEqual(s.get_shifts(), surf.get_shifts())
+        self.assertEqual(s.get_masks(), surf.get_masks())
+        self.assertEqual(s.get_losses(), surf.get_losses())
 
         # Issue 2 at Bitbucket.org/pygame/pygame
         surf = pygame.Surface.__new__(pygame.Surface)
@@ -1202,7 +1251,7 @@ class SurfaceTypeTest(unittest.TestCase):
             unmapped_c = surf.unmap_rgb(i)
             self.assertEqual(unmapped_c, c)
             # Confirm it is a Color instance
-            self.failUnless(isinstance(unmapped_c, pygame.Color))
+            self.assertIsInstance(unmapped_c, pygame.Color)
         finally:
             pygame.quit()
 
@@ -1219,7 +1268,7 @@ class SurfaceTypeTest(unittest.TestCase):
                                  "%s != %s, flags: %i, bitsize: %i" %
                                  (unmapped_c, comparison_c, flags, bitsize))
             # Confirm it is a Color instance
-            self.failUnless(isinstance(unmapped_c, pygame.Color))
+            self.assertIsInstance(unmapped_c, pygame.Color)
 
     def test_scroll(self):
         scrolls = [(8, 2, 3),
@@ -1283,6 +1332,12 @@ class SurfaceTypeTest(unittest.TestCase):
 class SurfaceSubtypeTest(unittest.TestCase):
     """Issue #280: Methods that return a new Surface preserve subclasses"""
 
+    def setUp(self):
+        pygame.display.init()
+
+    def tearDown(self):
+        pygame.display.quit()
+
     class MySurface(pygame.Surface):
         def __init__(self, *args, **kwds):
             super(SurfaceSubtypeTest.MySurface, self).__init__(*args, **kwds)
@@ -1308,16 +1363,12 @@ class SurfaceSubtypeTest(unittest.TestCase):
         instances of the subclass. Non Surface fields are omitted, however.
         This includes instance attributes.
         """
-        pygame.display.init()
-        try:
-            ms1 = self.MySurface((32, 32), 0, 24)
-            ms2 = ms1.convert(24)
-            self.assertTrue(ms2 is not ms1)
-            self.assertTrue(isinstance(ms2, self.MySurface))
-            self.assertTrue(ms1.an_attribute)
-            self.assertRaises(AttributeError, getattr, ms2, "an_attribute")
-        finally:
-            pygame.display.quit()
+        ms1 = self.MySurface((32, 32), 0, 24)
+        ms2 = ms1.convert(24)
+        self.assertTrue(ms2 is not ms1)
+        self.assertTrue(isinstance(ms2, self.MySurface))
+        self.assertTrue(ms1.an_attribute)
+        self.assertRaises(AttributeError, getattr, ms2, "an_attribute")
 
     def test_convert_alpha(self):
         """Ensure method convert_alpha() preserves the surface's class
@@ -1326,18 +1377,14 @@ class SurfaceSubtypeTest(unittest.TestCase):
         return instances of the subclass. Non Surface fields are omitted,
         however. This includes instance attributes.
         """
-        pygame.display.init()
-        try:
-            pygame.display.set_mode((40, 40))
-            s = pygame.Surface((32, 32), pygame.SRCALPHA, 16)
-            ms1 = self.MySurface((32, 32), pygame.SRCALPHA, 32)
-            ms2 = ms1.convert_alpha(s)
-            self.assertTrue(ms2 is not ms1)
-            self.assertTrue(isinstance(ms2, self.MySurface))
-            self.assertTrue(ms1.an_attribute)
-            self.assertRaises(AttributeError, getattr, ms2, "an_attribute")
-        finally:
-            pygame.display.quit()
+        pygame.display.set_mode((40, 40))
+        s = pygame.Surface((32, 32), pygame.SRCALPHA, 16)
+        ms1 = self.MySurface((32, 32), pygame.SRCALPHA, 32)
+        ms2 = ms1.convert_alpha(s)
+        self.assertTrue(ms2 is not ms1)
+        self.assertTrue(isinstance(ms2, self.MySurface))
+        self.assertTrue(ms1.an_attribute)
+        self.assertRaises(AttributeError, getattr, ms2, "an_attribute")
 
     def test_subsurface(self):
         """Ensure method subsurface() preserves the surface's class
@@ -1353,7 +1400,7 @@ class SurfaceSubtypeTest(unittest.TestCase):
         self.assertRaises(AttributeError, getattr, ms2, "an_attribute")
 
 
-class SurfaceGetBufferTest (unittest.TestCase):
+class SurfaceGetBufferTest(unittest.TestCase):
 
     # These tests requires ctypes. They are disabled if ctypes
     # is not installed.
@@ -1543,23 +1590,9 @@ class SurfaceGetBufferTest (unittest.TestCase):
                 s = pygame.Surface((4, 2), 0, 32)
                 self._check_interface_rgba(s, plane)
 
-    if pygame.HAVE_NEWBUF:
-        def test_newbuf_PyBUF_flags_bytes(self):
-            self.NEWBUF_test_newbuf_PyBUF_flags_bytes()
-        def test_newbuf_PyBUF_flags_0D(self):
-            self.NEWBUF_test_newbuf_PyBUF_flags_0D()
-        def test_newbuf_PyBUF_flags_1D(self):
-            self.NEWBUF_test_newbuf_PyBUF_flags_1D()
-        def test_newbuf_PyBUF_flags_2D(self):
-            self.NEWBUF_test_newbuf_PyBUF_flags_2D()
-        def test_newbuf_PyBUF_flags_3D(self):
-            self.NEWBUF_test_newbuf_PyBUF_flags_3D()
-        def test_newbuf_PyBUF_flags_rgba(self):
-            self.NEWBUF_test_newbuf_PyBUF_flags_rgba()
+    @unittest.skipIf(not pygame.HAVE_NEWBUF, 'newbuf not implemented')
+    def test_newbuf_PyBUF_flags_bytes(self):
         from pygame.tests.test_utils import buftools
-
-    def NEWBUF_test_newbuf_PyBUF_flags_bytes(self):
-        buftools = self.buftools
         Importer = buftools.Importer
         s = pygame.Surface((10, 6), 0, 32)
         a = s.get_buffer()
@@ -1616,10 +1649,11 @@ class SurfaceGetBufferTest (unittest.TestCase):
         self.assertEqual(b.ndim, 1)
         self.assertEqual(b.strides, (1,))
 
-    def NEWBUF_test_newbuf_PyBUF_flags_0D(self):
+    @unittest.skipIf(not pygame.HAVE_NEWBUF, 'newbuf not implemented')
+    def test_newbuf_PyBUF_flags_0D(self):
         # This is the same handler as used by get_buffer(), so just
         # confirm that it succeeds for one case.
-        buftools = self.buftools
+        from pygame.tests.test_utils import buftools
         Importer = buftools.Importer
         s = pygame.Surface((10, 6), 0, 32)
         a = s.get_view('0')
@@ -1634,8 +1668,9 @@ class SurfaceGetBufferTest (unittest.TestCase):
         self.assertFalse(b.readonly)
         self.assertEqual(b.buf, s._pixels_address)
 
-    def NEWBUF_test_newbuf_PyBUF_flags_1D(self):
-        buftools = self.buftools
+    @unittest.skipIf(not pygame.HAVE_NEWBUF, 'newbuf not implemented')
+    def test_newbuf_PyBUF_flags_1D(self):
+        from pygame.tests.test_utils import buftools
         Importer = buftools.Importer
         s = pygame.Surface((10, 6), 0, 32)
         a = s.get_view('1')
@@ -1671,8 +1706,9 @@ class SurfaceGetBufferTest (unittest.TestCase):
         self.assertTrue(b.format is None)
         self.assertEqual(b.strides, (s.get_bytesize(),))
 
-    def NEWBUF_test_newbuf_PyBUF_flags_2D(self):
-        buftools = self.buftools
+    @unittest.skipIf(not pygame.HAVE_NEWBUF, 'newbuf not implemented')
+    def test_newbuf_PyBUF_flags_2D(self):
+        from pygame.tests.test_utils import buftools
         Importer = buftools.Importer
         s = pygame.Surface((10, 6), 0, 32)
         a = s.get_view('2')
@@ -1745,8 +1781,9 @@ class SurfaceGetBufferTest (unittest.TestCase):
         self.assertRaises(BufferError, Importer, a,
                           buftools.PyBUF_ANY_CONTIGUOUS)
 
-    def NEWBUF_test_newbuf_PyBUF_flags_3D(self):
-        buftools = self.buftools
+    @unittest.skipIf(not pygame.HAVE_NEWBUF, 'newbuf not implemented')
+    def test_newbuf_PyBUF_flags_3D(self):
+        from pygame.tests.test_utils import buftools
         Importer = buftools.Importer
         s = pygame.Surface((12, 6), 0, 24)
         rmask, gmask, bmask, amask = s.get_masks()
@@ -1797,10 +1834,11 @@ class SurfaceGetBufferTest (unittest.TestCase):
         self.assertRaises(BufferError, Importer, a,
                           buftools.PyBUF_ANY_CONTIGUOUS)
 
-    def NEWBUF_test_newbuf_PyBUF_flags_rgba(self):
+    @unittest.skipIf(not pygame.HAVE_NEWBUF, 'newbuf not implemented')
+    def test_newbuf_PyBUF_flags_rgba(self):
         # All color plane views are handled by the same routine,
         # so only one plane need be checked.
-        buftools = self.buftools
+        from pygame.tests.test_utils import buftools
         Importer = buftools.Importer
         s = pygame.Surface((12, 6), 0, 24)
         rmask, gmask, bmask, amask = s.get_masks()
@@ -1850,6 +1888,13 @@ class SurfaceGetBufferTest (unittest.TestCase):
 
 class SurfaceBlendTest(unittest.TestCase):
 
+    def setUp(self):
+        # Needed for 8 bits-per-pixel color palette surface tests.
+        pygame.init()
+
+    def tearDown(self):
+        pygame.quit()
+
     _test_palette = [(0, 0, 0, 255),
                      (10, 30, 60, 0),
                      (25, 75, 100, 128),
@@ -1895,13 +1940,6 @@ class SurfaceBlendTest(unittest.TestCase):
                                  (surf.get_at(posn),
                                   palette[i], surf.get_flags(),
                                   surf.get_bitsize(), posn, msg))
-
-    def setUp(self):
-        # Needed for 8 bits-per-pixel color palette surface tests.
-        pygame.init()
-
-    def tearDown(self):
-        pygame.quit()
 
     def test_blit_blend(self):
         sources = [self._make_src_surface(8),
@@ -2062,14 +2100,8 @@ class SurfaceBlendTest(unittest.TestCase):
         src.fill((1, 2, 3, 4))
         dst.fill((40, 30, 20, 10))
         subsrc = src.subsurface((2, 3, 4, 4))
-        try:
-            subdst = dst.subsurface((2, 3, 4, 4))
-            try:
-                subdst.blit(subsrc, (0, 0), special_flags=BLEND_RGBA_ADD)
-            finally:
-                del subdst
-        finally:
-            del subsrc
+        subdst = dst.subsurface((2, 3, 4, 4))
+        subdst.blit(subsrc, (0, 0), special_flags=BLEND_RGBA_ADD)
         tst.fill((40, 30, 20, 10))
         tst.fill((41, 32, 23, 14), (2, 3, 4, 4))
         for x in range(8):
@@ -2086,9 +2118,10 @@ class SurfaceBlendTest(unittest.TestCase):
         area = (1, 1, 30, 30)
         s1 = pygame.Surface((4, 4), 0, 32)
         r = s1.fill(special_flags=pygame.BLEND_ADD, color=color, rect=area)
-        self.assertEquals(pygame.Rect((1, 1, 3, 3)), r)
-        self.assert_(s1.get_at((0, 0)) == (0, 0, 0, 255))
-        self.assert_(s1.get_at((1, 1)) == color)
+
+        self.assertEqual(pygame.Rect((1, 1, 3, 3)), r)
+        self.assertEqual(s1.get_at((0, 0)), (0, 0, 0, 255))
+        self.assertEqual(s1.get_at((1, 1)), color)
 
         black = pygame.Color("black")
         red = pygame.Color("red")
@@ -2193,6 +2226,13 @@ class SurfaceSelfBlitTest(unittest.TestCase):
     This test case is in response to MotherHamster Bugzilla Bug 19.
     """
 
+    def setUp(self):
+        # Needed for 8 bits-per-pixel color palette surface tests.
+        pygame.init()
+
+    def tearDown(self):
+        pygame.quit()
+
     _test_palette = [(0, 0, 0, 255),
                     (255, 0, 0, 0),
                     (0, 255, 0, 255)]
@@ -2224,13 +2264,6 @@ class SurfaceSelfBlitTest(unittest.TestCase):
                                      ("%s != %s, bpp: %i" %
                                       (a.get_at((x, y)), b.get_at((x, y)),
                                        a.get_bitsize())))
-
-    def setUp(self):
-        # Needed for 8 bits-per-pixel color palette surface tests.
-        pygame.init()
-
-    def tearDown(self):
-        pygame.quit()
 
     def test_overlap_check(self):
         # Ensure overlapping blits are properly detected. There are two
@@ -2376,54 +2409,60 @@ class SurfaceSelfBlitTest(unittest.TestCase):
         sub = surf.subsurface((1, 1, 2, 2))
         self.assertRaises(pygame.error, do_blit, surf, sub)
 
+    def test_copy_alpha(self):
+        """issue 581: alpha of surface copy with SRCALPHA is set to 0."""
+        surf = pygame.Surface((16, 16), pygame.SRCALPHA, 32)
+        self.assertEqual(surf.get_alpha(), 255)
+        surf2 = surf.copy()
+        self.assertEqual(surf2.get_alpha(), 255)
+
 
 class SurfaceFillTest(unittest.TestCase):
 
-    def test_fill(self):
+    def setUp(self):
         pygame.init()
-        try:
-            screen = pygame.display.set_mode((640, 480))
 
-            # Green and blue test pattern
-            screen.fill((0, 255, 0), (0, 0, 320, 240))
-            screen.fill((0, 255, 0), (320, 240, 320, 240))
-            screen.fill((0, 0, 255), (320, 0, 320, 240))
-            screen.fill((0, 0, 255), (0, 240, 320, 240))
+    def tearDown(self):
+        pygame.quit()
 
-            # Now apply a clip rect, such that only the left side of the
-            # screen should be effected by blit opperations.
-            screen.set_clip((0, 0, 320, 480))
+    def test_fill(self):
+        screen = pygame.display.set_mode((640, 480))
 
-            # Test fills with each special flag, and additionaly without any.
-            screen.fill((255, 0, 0, 127), (160, 0, 320, 30), 0)
-            screen.fill((255, 0, 0, 127), (160, 30, 320, 30), pygame.BLEND_ADD)
-            screen.fill((0, 127, 127, 127), (160, 60, 320, 30), pygame.BLEND_SUB)
-            screen.fill((0, 63, 63, 127), (160, 90, 320, 30), pygame.BLEND_MULT)
-            screen.fill((0, 127, 127, 127), (160, 120, 320, 30), pygame.BLEND_MIN)
-            screen.fill((127, 0, 0, 127), (160, 150, 320, 30), pygame.BLEND_MAX)
-            screen.fill((255, 0, 0, 127), (160, 180, 320, 30), pygame.BLEND_RGBA_ADD)
-            screen.fill((0, 127, 127, 127), (160, 210, 320, 30), pygame.BLEND_RGBA_SUB)
-            screen.fill((0, 63, 63, 127), (160, 240, 320, 30), pygame.BLEND_RGBA_MULT)
-            screen.fill((0, 127, 127, 127), (160, 270, 320, 30), pygame.BLEND_RGBA_MIN)
-            screen.fill((127, 0, 0, 127), (160, 300, 320, 30), pygame.BLEND_RGBA_MAX)
-            screen.fill((255, 0, 0, 127), (160, 330, 320, 30), pygame.BLEND_RGB_ADD)
-            screen.fill((0, 127, 127, 127), (160, 360, 320, 30), pygame.BLEND_RGB_SUB)
-            screen.fill((0, 63, 63, 127), (160, 390, 320, 30), pygame.BLEND_RGB_MULT)
-            screen.fill((0, 127, 127, 127), (160, 420, 320, 30), pygame.BLEND_RGB_MIN)
-            screen.fill((255, 0, 0, 127), (160, 450, 320, 30), pygame.BLEND_RGB_MAX)
+        # Green and blue test pattern
+        screen.fill((0, 255, 0), (0, 0, 320, 240))
+        screen.fill((0, 255, 0), (320, 240, 320, 240))
+        screen.fill((0, 0, 255), (320, 0, 320, 240))
+        screen.fill((0, 0, 255), (0, 240, 320, 240))
 
-            # Update the display so we can see the results
-            pygame.display.flip()
+        # Now apply a clip rect, such that only the left side of the
+        # screen should be effected by blit opperations.
+        screen.set_clip((0, 0, 320, 480))
 
-            # Compare colors on both sides of window
-            y = 5
-            while y < 480:
-                self.assertEquals(screen.get_at((10, y)),
-                        screen.get_at((330, 480 - y)))
-                y += 10
+        # Test fills with each special flag, and additionaly without any.
+        screen.fill((255, 0, 0, 127), (160, 0, 320, 30), 0)
+        screen.fill((255, 0, 0, 127), (160, 30, 320, 30), pygame.BLEND_ADD)
+        screen.fill((0, 127, 127, 127), (160, 60, 320, 30), pygame.BLEND_SUB)
+        screen.fill((0, 63, 63, 127), (160, 90, 320, 30), pygame.BLEND_MULT)
+        screen.fill((0, 127, 127, 127), (160, 120, 320, 30), pygame.BLEND_MIN)
+        screen.fill((127, 0, 0, 127), (160, 150, 320, 30), pygame.BLEND_MAX)
+        screen.fill((255, 0, 0, 127), (160, 180, 320, 30), pygame.BLEND_RGBA_ADD)
+        screen.fill((0, 127, 127, 127), (160, 210, 320, 30), pygame.BLEND_RGBA_SUB)
+        screen.fill((0, 63, 63, 127), (160, 240, 320, 30), pygame.BLEND_RGBA_MULT)
+        screen.fill((0, 127, 127, 127), (160, 270, 320, 30), pygame.BLEND_RGBA_MIN)
+        screen.fill((127, 0, 0, 127), (160, 300, 320, 30), pygame.BLEND_RGBA_MAX)
+        screen.fill((255, 0, 0, 127), (160, 330, 320, 30), pygame.BLEND_RGB_ADD)
+        screen.fill((0, 127, 127, 127), (160, 360, 320, 30), pygame.BLEND_RGB_SUB)
+        screen.fill((0, 63, 63, 127), (160, 390, 320, 30), pygame.BLEND_RGB_MULT)
+        screen.fill((0, 127, 127, 127), (160, 420, 320, 30), pygame.BLEND_RGB_MIN)
+        screen.fill((255, 0, 0, 127), (160, 450, 320, 30), pygame.BLEND_RGB_MAX)
 
-        finally:
-            pygame.quit()
+        # Update the display so we can see the results
+        pygame.display.flip()
+
+        # Compare colors on both sides of window
+        for y in range(5, 480,  10):
+            self.assertEqual(screen.get_at((10, y)), screen.get_at((330, 480 - y)))
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,14 +1,25 @@
+# -*- coding: utf-8 -*-
+
 import unittest
 import pygame, pygame.transform
+from pygame.compat import unicode_
+
+from pygame import display
 
 class DisplayModuleTest(unittest.TestCase):
+    default_caption = "pygame window"
+
+    def setUp(self):
+        display.init()
+    def tearDown(self):
+        display.quit()
 
     def test_update(self):
         """ see if pygame.display.update takes rects with negative values.
             "|Tags:display|"
         """
 
-        pygame.init()
+        #pygame.init()
         screen = pygame.display.set_mode((100, 100))
         screen.fill((55, 55, 55))
 
@@ -22,13 +33,13 @@ class DisplayModuleTest(unittest.TestCase):
         pygame.display.update(r3)
 
         # NOTE: if I don't call pygame.quit there is a segfault.  hrmm.
-        pygame.quit()
+        #pygame.quit()
         #  I think it's because unittest runs stuff in threads
         # here's a stack trace...
 
         # NOTE to author of above:
         #   unittest doesn't run tests in threads
-        #   segfault was probably caused by another tests need 
+        #   segfault was probably caused by another tests need
         #   for a "clean slate"
 
         """
@@ -135,7 +146,7 @@ class DisplayModuleTest(unittest.TestCase):
 
         self.fail()
 
-    def todo_test_get_caption(self):
+    def test_get_caption(self):
 
         # __doc__ (as of 2008-08-02) for pygame.display.get_caption:
 
@@ -146,7 +157,35 @@ class DisplayModuleTest(unittest.TestCase):
           # often be the same value.
           #
 
-        self.fail()
+        screen = display.set_mode((100, 100))
+        self.assertEqual(display.get_caption()[0], self.default_caption)
+
+    def test_set_caption(self):
+
+        # __doc__ (as of 2008-08-02) for pygame.display.set_caption:
+
+          # pygame.display.set_caption(title, icontitle=None): return None
+          # set the current window caption
+          #
+          # If the display has a window title, this function will change the
+          # name on the window. Some systems support an alternate shorter title
+          # to be used for minimized displays.
+          #
+
+        TEST_CAPTION = "test"
+        screen = display.set_mode((100, 100))
+        self.assertIsNone(display.set_caption(TEST_CAPTION))
+        self.assertEqual(display.get_caption()[0], TEST_CAPTION)
+        self.assertEqual(display.get_caption()[1], TEST_CAPTION)
+
+    def test_caption_unicode(self):
+        TEST_CAPTION = u'台'
+        display.set_caption(TEST_CAPTION)
+        import sys
+        if sys.version_info.major >= 3:
+            self.assertEqual(display.get_caption()[0], TEST_CAPTION)
+        else:
+            self.assertEqual(unicode_(display.get_caption()[0], 'utf8'), TEST_CAPTION)
 
     def todo_test_get_driver(self):
 
@@ -291,49 +330,48 @@ class DisplayModuleTest(unittest.TestCase):
 
         self.fail()
 
-    def todo_test_list_modes(self):
+    def test_list_modes(self):
+        modes = pygame.display.list_modes(
+            depth=0, flags=pygame.FULLSCREEN, display=0
+        )
+        # modes == -1 means any mode is supported.
+        if modes != -1:
+            self.assertEqual(len(modes[0]), 2)
+            self.assertEqual(type(modes[0][0]), int)
 
-        # __doc__ (as of 2008-08-02) for pygame.display.list_modes:
+        modes = pygame.display.list_modes()
+        if modes != -1:
+            self.assertEqual(len(modes[0]), 2)
+            self.assertEqual(type(modes[0][0]), int)
 
-          # pygame.display.list_modes(depth=0, flags=pygame.FULLSCREEN): return list
-          # get list of available fullscreen modes
-          #
-          # This function returns a list of possible dimensions for a specified
-          # color depth. The return value will be an empty list if no display
-          # modes are available with the given arguments. A return value of -1
-          # means that any requested resolution should work (this is likely the
-          # case for windowed modes). Mode sizes are sorted from biggest to
-          # smallest.
-          #
-          # If depth is 0, SDL will choose the current/best color depth for the
-          # display. The flags defaults to pygame.FULLSCREEN, but you may need
-          # to add additional flags for specific fullscreen modes.
-          #
+        modes = pygame.display.list_modes(
+            depth=0, flags=0, display=0
+        )
+        if modes != -1:
+            self.assertEqual(len(modes[0]), 2)
+            self.assertEqual(type(modes[0][0]), int)
 
-        self.fail()
+    def test_mode_ok(self):
+        pygame.display.mode_ok((128, 128))
+        modes = pygame.display.list_modes()
+        if modes != -1:
+            size = modes[0]
+            self.assertNotEqual(pygame.display.mode_ok(size), 0)
 
-    def todo_test_mode_ok(self):
+        pygame.display.mode_ok((128, 128), 0, 32)
+        pygame.display.mode_ok((128, 128), flags=0, depth=32, display=0)
 
-        # __doc__ (as of 2008-08-02) for pygame.display.mode_ok:
 
-          # pygame.display.mode_ok(size, flags=0, depth=0): return depth
-          # pick the best color depth for a display mode
-          #
-          # This function uses the same arguments as pygame.display.set_mode().
-          # It is used to depermine if a requested display mode is available. It
-          # will return 0 if the display mode cannot be set. Otherwise it will
-          # return a pixel depth that best matches the display asked for.
-          #
-          # Usually the depth argument is not passed, but some platforms can
-          # support multiple display depths. If passed it will hint to which
-          # depth is a better match.
-          #
-          # The most useful flags to pass will be pygame.HWSURFACE,
-          # pygame.DOUBLEBUF, and maybe pygame.FULLSCREEN. The function will
-          # return 0 if these display flags cannot be set.
-          #
+    def test_mode_ok_fullscreen(self):
+        modes = pygame.display.list_modes()
+        if modes != -1:
+            size = modes[0]
+            self.assertNotEqual(pygame.display.mode_ok(
+                                size,
+                                flags=pygame.FULLSCREEN), 0)
 
-        self.fail()
+    def test_get_num_displays(self):
+        self.assertGreater(pygame.display.get_num_displays(), 0)
 
     def todo_test_quit(self):
 
@@ -347,20 +385,6 @@ class DisplayModuleTest(unittest.TestCase):
           # when the program exits.
           #
           # It is harmless to call this more than once, repeated calls have no effect.
-
-        self.fail()
-
-    def todo_test_set_caption(self):
-
-        # __doc__ (as of 2008-08-02) for pygame.display.set_caption:
-
-          # pygame.display.set_caption(title, icontitle=None): return None
-          # set the current window caption
-          #
-          # If the display has a window title, this function will change the
-          # name on the window. Some systems support an alternate shorter title
-          # to be used for minimized displays.
-          #
 
         self.fail()
 
@@ -422,57 +446,10 @@ class DisplayModuleTest(unittest.TestCase):
 
         self.fail()
 
-    def todo_test_set_mode(self):
+    def test_set_mode_kwargs(self):
 
-        # __doc__ (as of 2008-08-02) for pygame.display.set_mode:
+        pygame.display.set_mode(size=(1, 1), flags=0, depth=0, display=0)
 
-          # pygame.display.set_mode(resolution=(0,0), flags=0, depth=0): return Surface
-          # initialize a window or screen for display
-          #
-          # This function will create a display Surface. The arguments passed in
-          # are requests for a display type. The actual created display will be
-          # the best possible match supported by the system.
-          #
-          # The resolution argument is a pair of numbers representing the width
-          # and height. The flags argument is a collection of additional
-          # options.  The depth argument represents the number of bits to use
-          # for color.
-          #
-          # The Surface that gets returned can be drawn to like a regular
-          # Surface but changes will eventually be seen on the monitor.
-          #
-          # If no resolution is passed or is set to (0, 0) and pygame uses SDL
-          # version 1.2.10 or above, the created Surface will have the same size
-          # as the current screen resolution. If only the width or height are
-          # set to 0, the Surface will have the same width or height as the
-          # screen resolution. Using a SDL version prior to 1.2.10 will raise an
-          # exception.
-          #
-          # It is usually best to not pass the depth argument. It will default
-          # to the best and fastest color depth for the system. If your game
-          # requires a specific color format you can control the depth with this
-          # argument. Pygame will emulate an unavailable color depth which can
-          # be slow.
-          #
-          # When requesting fullscreen display modes, sometimes an exact match
-          # for the requested resolution cannot be made. In these situations
-          # pygame will select the closest compatable match. The returned
-          # surface will still always match the requested resolution.
-          #
-          # The flags argument controls which type of display you want. There
-          # are several to choose from, and you can even combine multiple types
-          # using the bitwise or operator, (the pipe "|" character). If you pass
-          # 0 or no flags argument it will default to a software driven window.
-          # Here are the display flags you will want to choose from:
-          #
-          #    pygame.FULLSCREEN    create a fullscreen display
-          #    pygame.DOUBLEBUF     recommended for HWSURFACE or OPENGL
-          #    pygame.HWSURFACE     hardware accelerated, only in FULLSCREEN
-          #    pygame.OPENGL        create an opengl renderable display
-          #    pygame.RESIZABLE     display window should be sizeable
-          #    pygame.NOFRAME       display window will have no border or controls
-
-        self.fail()
 
     def todo_test_set_palette(self):
 

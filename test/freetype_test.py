@@ -2,15 +2,16 @@ import os
 if os.environ.get('SDL_VIDEODRIVER') == 'dummy':
     __tags__ = ('ignore', 'subprocess_ignore')
 
+import unittest
 import sys
 import ctypes
 import weakref
 import gc
 import platform
+
 IS_PYPY = 'PyPy' == platform.python_implementation()
 
 
-import unittest
 try:
     from pygame.tests.test_utils import arrinter
 except NameError:
@@ -45,6 +46,7 @@ def surf_same_image(a, b):
     a_bytes = ctypes.string_at(a._pixels_address, a_sz)
     b_bytes = ctypes.string_at(b._pixels_address, b_sz)
     return a_bytes == b_bytes
+
 
 class FreeTypeFontTest(unittest.TestCase):
 
@@ -124,7 +126,7 @@ class FreeTypeFontTest(unittest.TestCase):
         self.assertRaises(OverflowError, ft.Font, file=None, size=-1)
 
         f = ft.Font(None, size=24)
-        self.assert_(f.height > 0)
+        self.assertTrue(f.height > 0)
         self.assertRaises(IOError, f.__init__,
                           os.path.join(FONTDIR, 'nonexistant.ttf'))
 
@@ -155,6 +157,16 @@ class FreeTypeFontTest(unittest.TestCase):
         self.assertEqual(f.size, (x_ppem, y_ppem))
         f.__init__(self._bmp_8_75dpi_path, size=12)
         self.assertEqual(f.size, 12.0)
+
+    @unittest.skipIf(IS_PYPY, "PyPy doesn't use refcounting")
+    def test_freetype_Font_dealloc(self):
+        import sys
+        handle = open(self._sans_path, 'rb')
+        def load_font():
+            tempFont = ft.Font(handle)
+        load_font()
+        self.assertEqual(sys.getrefcount(handle), 2)
+        handle.close()
 
     def test_freetype_Font_scalable(self):
 
@@ -1043,13 +1055,10 @@ class FreeTypeFontTest(unittest.TestCase):
 
         self.assertRaises(AttributeError, setattr, f, 'fgcolor', None)
 
-    if pygame.HAVE_NEWBUF:
-        def test_newbuf(self):
-            self.NEWBUF_test_newbuf()
+    @unittest.skipIf(not pygame.HAVE_NEWBUF, 'newbuf not implemented')
+    def test_newbuf(self):
         from pygame.tests.test_utils import buftools
-
-    def NEWBUF_test_newbuf(self):
-        Exporter = self.buftools.Exporter
+        Exporter = buftools.Exporter
         font = self._TEST_FONTS['sans']
         srect = font.get_rect("Hi", size=12)
         for format in ['b', 'B', 'h', 'H', 'i', 'I', 'l', 'L', 'q', 'Q',
@@ -1072,18 +1081,14 @@ class FreeTypeFontTest(unittest.TestCase):
         self.assertEqual(ft.STYLE_NORMAL, font.style)
 
         # make sure we check for style type
-        try:    font.style = "None"
-        except TypeError: pass
-        else:   self.fail("Failed style assignement")
-
-        try:    font.style = None
-        except TypeError: pass
-        else:   self.fail("Failed style assignement")
+        with self.assertRaises(TypeError):
+            font.style = "None"
+        with self.assertRaises(TypeError):
+            font.style = None
 
         # make sure we only accept valid constants
-        try:    font.style = 112
-        except ValueError: pass
-        else:   self.fail("Failed style assignement")
+        with self.assertRaises(ValueError):
+            font.style = 112
 
         # make assure no assignements happened
         self.assertEqual(ft.STYLE_NORMAL, font.style)
@@ -1419,13 +1424,35 @@ class FreeTypeFontTest(unittest.TestCase):
         self.assertRaises(pygame.error, f.render_to,
                           null_surface, (0, 0), "Crash!", size=12)
 
+    def test_issue_565(self):
+        """get_metrics supporting rotation/styles/size"""
+
+        tests = [
+            {'method': 'size', 'value': 36, 'msg': 'metrics same for size'},
+            {'method': 'rotation', 'value': 90, 'msg': 'metrics same for rotation'},
+            {'method': 'oblique', 'value': True, 'msg': 'metrics same for oblique'}
+        ]
+        text = "|"
+
+        def run_test(method, value, msg):
+            font = ft.Font(self._sans_path, size=24)
+            before = font.get_metrics(text)
+            font.__setattr__(method, value)
+            after = font.get_metrics(text)
+            self.assertNotEqual(before, after, msg)
+
+        for test in tests:
+            run_test(test['method'], test['value'], test['msg'])
+
 
 class FreeTypeTest(unittest.TestCase):
+    def setUp(self):
+        ft.init()
+
+    def tearDown(self):
+        ft.quit()
 
     def test_resolution(self):
-        was_init = ft.was_init()
-        if not was_init:
-            ft.init()
         try:
             ft.set_default_resolution()
             resolution = ft.get_default_resolution()
@@ -1437,31 +1464,59 @@ class FreeTypeTest(unittest.TestCase):
             self.assertEqual(ft.get_default_resolution(), new_resolution)
         finally:
             ft.set_default_resolution()
-            if was_init:
-                ft.quit()
 
     def test_autoinit_and_autoquit(self):
         pygame.init()
-        self.assertTrue(ft.was_init())
+        self.assertTrue(ft.get_init())
         pygame.quit()
-        self.assertFalse(ft.was_init())
+        self.assertFalse(ft.get_init())
 
         # Ensure autoquit is replaced at init time
         pygame.init()
-        self.assertTrue(ft.was_init())
+        self.assertTrue(ft.get_init())
         pygame.quit()
-        self.assertFalse(ft.was_init())
+        self.assertFalse(ft.get_init())
+
+    def test_init(self):
+        # Test if module initialized after calling init().
+        ft.quit()
+        ft.init()
+
+        self.assertTrue(ft.get_init())
+
+    def test_init__multiple(self):
+        # Test if module initialized after multiple init() calls.
+        ft.init()
+        ft.init()
+
+        self.assertTrue(ft.get_init())
+
+    def test_quit(self):
+        # Test if module uninitialized after calling quit().
+        ft.quit()
+
+        self.assertFalse(ft.get_init())
+
+    def test_quit__multiple(self):
+        # Test if module initialized after multiple quit() calls.
+        ft.quit()
+        ft.quit()
+
+        self.assertFalse(ft.get_init())
+
+    def test_get_init(self):
+        # Test if get_init() gets the init state.
+        self.assertTrue(ft.get_init())
 
     def test_cache_size(self):
         DEFAULT_CACHE_SIZE = 64
-        ft.init()
         self.assertEqual(ft.get_cache_size(), DEFAULT_CACHE_SIZE)
         ft.quit()
         self.assertEqual(ft.get_cache_size(), 0)
         new_cache_size = DEFAULT_CACHE_SIZE * 2
         ft.init(cache_size=new_cache_size)
         self.assertEqual(ft.get_cache_size(), new_cache_size)
-        ft.quit()
+
 
 if __name__ == '__main__':
     unittest.main()

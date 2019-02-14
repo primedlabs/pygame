@@ -19,7 +19,7 @@ supports (currently Windows, ``OSX``, and Linux).
 This uses pyportmidi for now, but may use its own bindings at some point in the
 future. The pyportmidi bindings are included with pygame.
 
-New in pygame 1.9.0.
+.. versionadded:: 1.9.0
 
 .. class:: Input
 
@@ -161,7 +161,7 @@ New in pygame 1.9.0.
       changed in some synthesizers).
 
       If no value is given, the pitch bend is returned to "no change".
-      New in pygame 1.9.4.
+      .. versionadded:: 1.9.4.
 
    .. method:: write
 
@@ -413,6 +413,17 @@ New in pygame 1.9.0.
 
    .. ## pygame.midi.quit ##
 
+.. function:: get_init
+
+   | :sl:`returns True if the midi module is currently initialized`
+   | :sg:`get_init() -> bool`
+
+   Returns ``True`` if the ``pygame.midi`` module is currently initialized.
+
+   .. versionadded:: 1.9.5
+
+   .. ## pygame.midi.get_init ##
+
 .. function:: time
 
    | :sl:`returns the current time in ms of the PortMidi timer`
@@ -421,5 +432,51 @@ New in pygame 1.9.0.
    The time is reset to 0, when the module is inited.
 
    .. ## pygame.midi.time ##
+
+
+.. function:: frequency_to_midi
+
+   | :sl:`Converts a frequency into a MIDI note. Rounds to the closest midi note.`
+   | :sg:`frequency_to_midi(midi_note) -> midi_note`
+
+   example:
+
+   ::
+       frequency_to_midi(27.5) == 21
+
+   .. versionadded:: 1.9.5
+
+   .. ## pygame.midi.frequency_to_midi ##
+
+
+.. function:: midi_to_frequency
+
+   | :sl:`Converts a midi note to a frequency.`
+   | :sg:`midi_to_frequency(midi_note) -> frequency`
+
+   example:
+
+   ::
+       midi_to_frequency(21) == 27.5
+
+   .. versionadded:: 1.9.5
+
+   .. ## pygame.midi.midi_to_frequency ##
+
+
+.. function:: midi_to_ansi_note
+
+   | :sl:`Returns the Ansi Note name for a midi number.`
+   | :sg:`midi_to_ansi_note(midi_note) -> ansi_note`
+
+   example:
+
+   ::
+       midi_to_ansi_note(21) == 'A0'
+
+   .. versionadded:: 1.9.5
+
+   .. ## pygame.midi.midi_to_ansi_note ##
+
 
 .. ## pygame.midi ##

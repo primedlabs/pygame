@@ -74,7 +74,7 @@ Credits
 
      Ulf Ekström for his pixel perfect collision detection code.
 
-     Pete Shinners - orginal author.
+     Pete Shinners - original author.
 
      David Clark - for filling the right-hand-man position
 
@@ -113,7 +113,7 @@ Credits
      Michael Benfield, David Lau
 
      There's many more folks out there who've submitted helpful ideas, kept
-     this project going, and basically made my life easer, Thanks!
+     this project going, and basically made my life easier. Thanks!
 
      Many thank you's for people making documentation comments, and adding to the
      pygame.org wiki.
@@ -126,8 +126,6 @@ Credits
      Also a big thanks to Roger Dingledine and the crew at SEUL.ORG for our
      excellent hosting.
 
-
-
 Dependencies
 ============
 
@@ -139,6 +137,16 @@ Dependencies
      transform module has an embedded version of SDL_rotozoom for its
      own rotozoom function. The surfarray module requires the python
      numpy package for its multidimensional numeric arrays.
+     Dependency versions:
+
+     * Python >= 2.7 or PyPy >= 6.0.0 (and pypy3)
+     * SDL >= 1.2.15
+     * SDL_mixer >= 1.2.13
+     * SDL_image >= 1.2.12
+     * SDL_tff >= 2.0.11
+     * SDL_gfx (optional, vendored in)
+     * NumPy >= 1.6.2 (optional)
+
 
 Contribute
 ==========
@@ -155,7 +163,7 @@ License
 
      This basically means you can use pygame in any project you want,
      but if you make any changes or additions to pygame itself, those
-     must be released with a compatible license. (preferably submitted
+     must be released with a compatible license (preferably submitted
      back to the pygame project). Closed source and commercial games are
      fine.
 

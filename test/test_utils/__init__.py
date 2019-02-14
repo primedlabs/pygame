@@ -48,10 +48,10 @@ def get_tmp_dir():
 ################################################################################
 
 def question(q):
-    return raw_input_('%s ' % q.rstrip(' ')).lower().strip() == 'y'
+    return raw_input_('\n%s (y/n): ' % q.rstrip(' ')).lower().strip() == 'y'
 
 def prompt(p):
-    return raw_input_('%s (and press enter to continue) ' % p.rstrip(' '))
+    return raw_input_('\n%s (press enter to continue): ' % p.rstrip(' '))
 
 #################################### HELPERS ###################################
 
@@ -91,26 +91,6 @@ def gradient(width, height):
         for t in xrange_(height):
             yield (l,t), tuple(map(rgba_between, (l, t, l, l+t)))
 
-def unordered_equality(seq1, seq2):
-    """
-    
-    Tests to see if the contents of one sequence is contained in the other
-    and that they are of the same length.
-    
-    """
-            
-    if len(seq1) != len(seq2):
-        return False
-
-    # if isinstance(seq1, dict) and isinstance(seq2, dict):
-    #    seq1 = seq1.items()
-    #    seq2 = seq2.items()
-
-    for val in seq1:
-        if val not in seq2:
-            return False
-        
-    return True
 
 def rect_area_pts(rect):
     for l in xrange_(rect.left, rect.right):

@@ -10,14 +10,28 @@ from pygame import scrap
 from pygame.compat import as_bytes
 
 class ScrapModuleTest(unittest.TestCase):
-    not_initialized = True
 
-    def setUp(self):
-        if self.not_initialized:
-            pygame.init ()
-            pygame.display.set_mode ((1, 1))
-            scrap.init ()
-            self.not_initialized = False
+    @classmethod
+    def setUpClass(cls):
+        pygame.init()
+        pygame.display.set_mode((1, 1))
+        scrap.init()
+
+    @classmethod
+    def tearDownClass(cls):
+        # scrap.quit()  # Does not exist!
+        pygame.quit()
+
+    def test_init(self):
+        # Test if module initialized after multiple init() calls.
+        scrap.init()
+        scrap.init()
+
+        self.assertTrue(scrap.get_init())
+
+    def test_get_init(self):
+        # Test if get_init() gets the init state.
+        self.assertTrue(scrap.get_init())
 
     def todo_test_contains(self):
 
@@ -76,21 +90,6 @@ class ScrapModuleTest(unittest.TestCase):
 
         self.fail()
 
-    def todo_test_init(self):
-
-        # __doc__ (as of 2008-08-02) for pygame.scrap.init:
-
-          # scrap.init () -> None
-          # Initializes the scrap module.
-          #
-          # Tries to initialize the scrap module and raises an exception, if it
-          # fails. Note that this module requires a set display surface, so you
-          # have to make sure, you acquired one earlier using
-          # pygame.display.set_mode().
-          #
-
-        self.fail()
-
     def todo_test_lost(self):
 
         # __doc__ (as of 2008-08-02) for pygame.scrap.lost:
@@ -113,12 +112,11 @@ class ScrapModuleTest(unittest.TestCase):
 
     def test_scrap_put_text (self):
         scrap.put (pygame.SCRAP_TEXT, as_bytes("Hello world"))
-        self.assertEquals (scrap.get (pygame.SCRAP_TEXT),
-                           as_bytes("Hello world"))
-
+        self.assertEqual(scrap.get(pygame.SCRAP_TEXT), as_bytes("Hello world"))
         scrap.put (pygame.SCRAP_TEXT, as_bytes("Another String"))
-        self.assertEquals (scrap.get (pygame.SCRAP_TEXT),
-                           as_bytes("Another String"))
+
+        self.assertEqual(scrap.get(pygame.SCRAP_TEXT),
+                         as_bytes("Another String"))
 
     def test_scrap_put_image (self):
         if 'pygame.image' not in sys.modules:
@@ -126,14 +124,16 @@ class ScrapModuleTest(unittest.TestCase):
         sf = pygame.image.load (
             trunk_relative_path("examples/data/asprite.bmp")
         )
-        string = pygame.image.tostring (sf, "RGBA")
-        scrap.put (pygame.SCRAP_BMP, string)
-        self.assertEquals (scrap.get(pygame.SCRAP_BMP), string)
+        expected_string = pygame.image.tostring(sf, "RGBA")
+        scrap.put(pygame.SCRAP_BMP, expected_string)
+
+        self.assertEqual(scrap.get(pygame.SCRAP_BMP), expected_string)
 
     def test_put (self):
         scrap.put ("arbitrary buffer", as_bytes("buf"))
         r = scrap.get ("arbitrary buffer")
-        self.assertEquals (r, as_bytes("buf"))
+
+        self.assertEqual(r, as_bytes("buf"))
 
 class X11InteractiveTest(unittest.TestCase):
     __tags__ = ['ignore', 'subprocess_ignore']

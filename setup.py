@@ -87,6 +87,17 @@ if "-warnings" in sys.argv:
                        "-Wnested-externs -Wshadow -Wredundant-decls"
     sys.argv.remove ("-warnings")
 
+if 'cython' in sys.argv:
+    # So you can `setup.py cython` or `setup.py cython install`
+    try:
+        from Cython.Build import cythonize
+    except ImportError:
+        print("You need cython. https://cython.org/, pip install cython --user")
+
+    cythonize(["src_c/_sdl2/*.pyx", "src_c/pypm.pyx"],
+              include_path=["src_c/_sdl2", "src_c"])
+    sys.argv.remove('cython')
+
 AUTO_CONFIG = False
 if '-auto' in sys.argv:
     AUTO_CONFIG = True
@@ -178,7 +189,7 @@ if len(sys.argv) == 1 and sys.stdout.isatty():
 
 #make sure there is a Setup file
 if AUTO_CONFIG or not os.path.isfile('Setup'):
-    print ('\n\nWARNING, No "Setup" File Exists, Running "buildconifg/config.py"')
+    print ('\n\nWARNING, No "Setup" File Exists, Running "buildconfig/config.py"')
     import buildconfig.config
     buildconfig.config.main(AUTO_CONFIG)
     if '-config' in sys.argv:
@@ -319,8 +330,40 @@ def parse_version(ver):
     from re import findall
     return ', '.join(s for s in findall('\d+', ver)[0:3])
 
+def parse_source_version():
+    pgh_major = -1
+    pgh_minor = -1
+    pgh_patch = -1
+    import re
+    major_exp_search = re.compile('define\s+PG_MAJOR_VERSION\s+([0-9]+)').search
+    minor_exp_search = re.compile('define\s+PG_MINOR_VERSION\s+([0-9]+)').search
+    patch_exp_search = re.compile('define\s+PG_PATCH_VERSION\s+([0-9]+)').search
+    pg_header = os.path.join('src_c', '_pygame.h')
+    with open(pg_header) as f:
+        for line in f:
+            if pgh_major == -1:
+                m = major_exp_search(line)
+                if m: pgh_major = int(m.group(1))
+            if pgh_minor == -1:
+                m = minor_exp_search(line)
+                if m: pgh_minor = int(m.group(1))
+            if pgh_patch == -1:
+                m = patch_exp_search(line)
+                if m: pgh_patch = int(m.group(1))
+    if pgh_major == -1:
+        raise SystemExit("_pygame.h: cannot find PG_MAJOR_VERSION")
+    if pgh_minor == -1:
+        raise SystemExit("_pygame.h: cannot find PG_MINOR_VERSION")
+    if pgh_patch == -1:
+        raise SystemExit("_pygame.h: cannot find PG_PATCH_VERSION")
+    return (pgh_major, pgh_minor, pgh_patch)
+
 def write_version_module(pygame_version, revision):
     vernum = parse_version(pygame_version)
+    src_vernum = parse_source_version()
+    if vernum != ', '.join(str(e) for e in src_vernum):
+        raise SystemExit("_pygame.h version differs from 'METADATA' version"
+                         ": %s vs %s" % (vernum, src_vernum))
     with open(os.path.join('buildconfig', 'version.py.in'), 'r') as header_file:
         header = header_file.read()
     with open(os.path.join('src_py', 'version.py'), 'w') as version_file:
@@ -508,6 +551,10 @@ cmdclass['test'] = TestCommand
 
 
 class DocsCommand(Command):
+    """ For building the pygame documentation with `python setup.py docs`.
+
+    This generates html, and documentation .h header files.
+    """
     user_options = [ ]
 
     def initialize_options(self):
@@ -520,8 +567,20 @@ class DocsCommand(Command):
         '''
         runs the tests with default options.
         '''
+        docs_help = (
+            "Building docs requires Python version 3.6 or above, and sphinx."
+        )
+        if not hasattr(sys, 'version_info') or sys.version_info < (3, 6):
+            raise SystemExit(docs_help)
+
         import subprocess
-        return subprocess.call([sys.executable, os.path.join('buildconfig', 'makeref.py')])
+        try:
+            return subprocess.call([
+                sys.executable, os.path.join('buildconfig', 'makeref.py')]
+            )
+        except:
+            print(docs_help)
+            raise
 
 cmdclass['docs'] = DocsCommand
 
@@ -543,7 +602,7 @@ date_files = [(path, files) for path, files in data_files if files]
 #call distutils with all needed info
 PACKAGEDATA = {
        "cmdclass":    cmdclass,
-       "packages":    ['pygame', 'pygame.gp2x', 'pygame.threads',
+       "packages":    ['pygame', 'pygame.gp2x', 'pygame.threads', 'pygame._sdl2',
                        'pygame.tests',
                        'pygame.tests.test_utils',
                        'pygame.tests.run_tests__tests',
@@ -560,6 +619,7 @@ PACKAGEDATA = {
                        'pygame.docs',
                        'pygame.examples'],
        "package_dir": {'pygame': 'src_py',
+                       'pygame._sdl2': 'src_py/_sdl2',
                        'pygame.threads': 'src_py/threads',
                        'pygame.gp2x': 'src_py/gp2x',
                        'pygame.tests': 'test',
@@ -572,7 +632,6 @@ PACKAGEDATA = {
 }
 PACKAGEDATA.update(METADATA)
 PACKAGEDATA.update(EXTRAS)
-
 
 try:
     setup(**PACKAGEDATA)

@@ -331,6 +331,7 @@ class PixelArrayTypeTest (unittest.TestCase, TestMixin):
             self.assertEqual (ar[3][5], sf.map_rgb ((10, 10, 10)))
             self.assertEqual (ar[3][6], sf.map_rgb ((10, 10, 10)))
 
+    @unittest.skipIf(IS_PYPY, 'skipping for PyPy (segfaults on mac pypy3 6.0.0)')
     def test_contains (self):
         for bpp in (8, 16, 24, 32):
             sf = pygame.Surface ((10, 20), 0, bpp)
@@ -1137,17 +1138,15 @@ class PixelArrayArrayInterfaceTest(unittest.TestCase, TestMixin):
             self.assert_surfaces_equal (sf3, sf2)
 
 
-class PixelArrayNewBufferTest (unittest.TestCase, TestMixin):
+@unittest.skipIf(not pygame.HAVE_NEWBUF, 'newbuf not implemented')
+class PixelArrayNewBufferTest(unittest.TestCase, TestMixin):
+
     if pygame.HAVE_NEWBUF:
-        def test_newbuf_2D (self):
-            self.NEWBUF_test_newbuf_2D ()
-        def test_newbuf_1D (self):
-            self.NEWBUF_test_newbuf_1D ()
         from pygame.tests.test_utils import buftools
 
     bitsize_to_format = {8: 'B', 16: '=H', 24: '3x', 32: '=I'}
 
-    def NEWBUF_test_newbuf_2D (self):
+    def test_newbuf_2D (self):
         buftools = self.buftools
         Importer = buftools.Importer
 
@@ -1295,7 +1294,7 @@ class PixelArrayNewBufferTest (unittest.TestCase, TestMixin):
         self.assertRaises (BufferError, Importer, ar,
                            buftools.PyBUF_ANY_CONTIGUOUS)
 
-    def NEWBUF_test_newbuf_1D (self):
+    def test_newbuf_1D(self):
         buftools = self.buftools
         Importer = buftools.Importer
 
